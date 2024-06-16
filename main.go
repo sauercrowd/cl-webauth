@@ -2,7 +2,6 @@ package main
 
 /*
 #cgo CFLAGS: -I.
-#include "webauthn.h"
 */
 import "C"
 
