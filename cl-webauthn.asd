@@ -2,5 +2,5 @@
   :version "0.1"
   :author "Jonas Otten"
   :license "MIT"
-  :components ((:file "cl-webauthn.lisp"))
+  :components ((:file "cl-webauthn"))
   :depends-on ("cffi"))

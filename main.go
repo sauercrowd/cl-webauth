@@ -2,6 +2,11 @@ package main
 
 /*
 #cgo CFLAGS: -I.
+
+struct ValidateLoginResult {
+    int isValid;
+    char* error;
+};
 */
 import "C"
 
@@ -19,9 +24,18 @@ type User struct {
 	Name string
 }
 
+func createError(msg string) *C.struct_ValidateLoginResult {
+	result := (*C.struct_ValidateLoginResult)(C.malloc(C.sizeof_struct_ValidateLoginResult))
+
+	result.isValid = 0
+	result.error = C.CString(msg)
+	return result
+}
+
+
 
 //export ValidateLogin
-func ValidateLogin (cId, cName, cCredentialJSONs, cSessionDataJson *C.char) C.int {
+func ValidateLogin (cId, cName, cCredentialJSONs, cSessionDataJson *C.char) *C.struct_ValidateLoginResult {
 	var car protocol.CredentialAssertionResponse
 
 	var credentials []webauthn.Credential
@@ -33,8 +47,7 @@ func ValidateLogin (cId, cName, cCredentialJSONs, cSessionDataJson *C.char) C.in
 	err := json.Unmarshal([]byte(C.GoString(cCredentialJSONs)), &credentials)
 
 	if err != nil {
-		fmt.Println("unable to parse credentials")
-		return 1
+		return createError("unable to parse credentials")
 	}
 
 	var sessionData webauthn.SessionData
@@ -42,15 +55,13 @@ func ValidateLogin (cId, cName, cCredentialJSONs, cSessionDataJson *C.char) C.in
 	err = json.Unmarshal([]byte(sessionDataJson), &sessionData)
 
 	if err != nil{
-		fmt.Println("Unable to parse session JSON");
-		return 1
+		return createError("Unable to parse session JSON");
 	}
 
 	par, err := car.Parse()
 
 	if err != nil{
-		fmt.Println("Unable to parse session JSON into credential assertion data");
-		return 1
+		return createError("Unable to parse session JSON into credential assertion data");
 	}
 	
 	user :=  User {ID: id, Credentials: credentials, Name: name}
@@ -64,17 +75,20 @@ func ValidateLogin (cId, cName, cCredentialJSONs, cSessionDataJson *C.char) C.in
 	wa, err := webauthn.New(wconfig)
 
 	if err != nil {
-	    fmt.Println(err)
-	    return 1
+	    return createError(fmt.Sprint(err))
 	}
 
 	_, err = wa.ValidateLogin(user, sessionData, par)
 
 	if err != nil {
-		return 1
+	    return createError(fmt.Sprint(err))
 	}
 
-	return 0
+	result := (*C.struct_ValidateLoginResult)(C.malloc(C.sizeof_struct_ValidateLoginResult))
+
+	result.isValid = 1
+	result.error = C.CString("");
+	return result
 }
 
 func (u User) WebAuthnCredentials() []webauthn.Credential {
